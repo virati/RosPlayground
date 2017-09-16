@@ -18,29 +18,46 @@ class Driver:
 	def mover(self,inPoint):
 		
 		#INPUT HERE IS A POINT
-		inCoord = np.array(inPoint)
+		#inCoord = np.array(inPoint)
 		#Check if the point we're looking for is normalized
-		assert inCoord.any() <= 1
-		
-		inX = inPoint.x
-		#Center to the screen
-		inX = inX - 0.5
-		
-		#since we're JUST TURNING FOR NOW, we'll focus on the x coord
-		targ = inX
-		
-		t_av = 0
-		
-		#set target_angular_vel; still just velocity
-		t_av += np.sign(targ) * 0.1
-		
-		#is target Ang Vel > control ang vel?
-		c_av = min(t_av,c_av + 0.1/4.0)
-		
+		#assert inCoord.any() <= 1
 		twist=Twist()
-		#We don't care about linear twist yet
+		inX = inPoint.x
+		
+		print(inX)
+
+		if inX <= 1:
+			#Center to the screen
+			inX = inX - 0.5
+			
+			#since we're JUST TURNING FOR NOW, we'll focus on the x coord
+			targ = inX
+			
+			print('X ball: ' + str(targ))
+			
+			t_av = 0
+			c_av = 0
+			
+			#set target_angular_vel; still just velocity
+			#if we want to go to the ball:
+			
+			t_av -= np.sign(targ) * 0.1
+			
+			#if we want to be scared of the ball: but can also collapse into single var and multily above
+			
+			#t_av += np.sign(targ) * 0.1
+			
+			
+			#is target Ang Vel > control ang vel?
+			c_av = t_av
+			
+		else:
+			c_av = 0
+			
 		twist.linear.x = 0; twist.linear.y = 0; twist.linear.z = 0;
-		twist.angular.x = 0;twist.angular.y;twist.angular.z = c_av
+		twist.angular.x = 0;twist.angular.y;twist.angular.z = c_av;
+			
+		print('Publishing ' + str(c_av))
 		self.pub_vel(twist)
 		
 	def pub_vel(self,twist):

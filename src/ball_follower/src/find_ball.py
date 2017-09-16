@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 
+import time
 
 class LocateBall:
 	x = 0
@@ -43,20 +44,33 @@ class LocateBall:
 		curr_img = self.bridge.compressed_imgmsg_to_cv2(CVData, "bgr8")
 		
 		#processing here
-		assert LocCircles(curr_img)
+		self.circles[1] = self.LocCircles(curr_img)
 		
 		
 	def LocCircles(self,img):
 		#processed image
-		pimg = cv2.medianBlur(img,5)
-		circs = cv2.HoughCircles(pimg,cv2.HOUGH_GRADIENT,1,20,param1=50,param2=60,minRadius=20,maxRadius=0)
+		pimg = img
+		#pimg = cv2.medianBlur(pimg,3)
+		pimg = cv2.cvtColor(pimg,cv2.COLOR_BGR2GRAY)
+		pimg = cv2.Canny(pimg,100,200)
+		#_,pimg = cv2.threshold(pimg,220,255,cv2.THRESH_TRUNC)
+		
+		circs = cv2.HoughCircles(pimg,cv2.HOUGH_GRADIENT,1,40,param1=20,param2=30,minRadius=5,maxRadius=0)
+		
 		
 		if circs is not None:
-			clist = np.uint16(np.around(circles))
+			print(str(time.time()) + ': Found a circle!')
+			clist = np.uint16(np.around(circs))
 			
-			for ii in circles[0,:]:
-				cv2.circle(pimg,(ii[0],ii[1]),ii[2],(0,255,0),2)
-				cv2.circle(pimg,(ii[0],ii[1]),2,(0,0,255),3)
+			for ii in circs[0,:]:
+				cv2.circle(pimg,(ii[0],ii[1]),ii[2],(255,255,0),2)
+				cv2.circle(pimg,(ii[0],ii[1]),2,(255,0,255),3)
+			
+			#generate a uniform random and only show "every fourth frame"
+			runi = np.random.uniform(0,1)
+			if runi < -1:
+				cv2.imshow('detected circles',pimg)
+				cv2.waitKey(1)
 				
 			coords = clist[0][0]
 			h,w = pimg.shape[:2]
@@ -64,11 +78,20 @@ class LocateBall:
 			self.y = coords[1]/float(h)
 			self.z = coords[2]/(float(w)*float(h))
 				
-			return True
+			foundball = True
 		else:
-			print('No Circles Found')
+			#print(str(time.time()) + 'No Circles Found')
+			#if we don't find a circle, we should just pause where we are
+			self.x = 10
+			self.y = 10
+			self.z = 10
+				
+			foundball = False
 			
-			return False
+		cv2.imshow('InImage',pimg)
+		cv2.waitKey(1)
+		
+		return foundball
 			
 	def pub_coord(self):
 		self.pub.publish(Point(self.x,self.y,self.z))
@@ -84,7 +107,9 @@ if __name__ == '__main__':
 			if mainFind.circles[1] != False:
 				mainFind.pub_coord()
 			else:
-				print('No Circles In FOV')
+				pass
+				mainFind.pub_coord()
+				#print(str(time.time()) + 'Bypass Pub')
 			rate.sleep()
 		cv2.destroyAllWindows()
 	except rospy.ROSInterruptException:
